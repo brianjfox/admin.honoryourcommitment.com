@@ -32,6 +32,11 @@ export default function Layout() {
           <NavLink to="/groups" className={link}>
             Groups
           </NavLink>
+          {can('broadcast') && (
+            <NavLink to="/broadcasts" className={link}>
+              Broadcasts
+            </NavLink>
+          )}
           {can('manage_users') && (
             <NavLink to="/users" className={link}>
               Users

@@ -85,8 +85,13 @@ a { color: var(--navy-700); }
 .bulk-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .filters { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .filters input, .filters select { flex: 1; min-width: 120px; }
-input, select { font: inherit; font-size: 0.9rem; padding: 0.45em 0.6em; border: 1px solid var(--line); border-radius: 6px; background: var(--white); color: var(--ink); }
-input:focus, select:focus { outline: none; border-color: var(--navy-600); box-shadow: 0 0 0 3px rgba(28,70,112,.12); }
+input, select, textarea { font: inherit; font-size: 0.9rem; padding: 0.45em 0.6em; border: 1px solid var(--line); border-radius: 6px; background: var(--white); color: var(--ink); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--navy-600); box-shadow: 0 0 0 3px rgba(28,70,112,.12); }
+textarea { width: 100%; resize: vertical; line-height: 1.5; }
+
+/* Compose form */
+.field { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.9rem; font-size: 0.85rem; font-weight: 600; color: var(--navy-800); }
+.recip-count { font-size: 1.6rem; font-weight: 800; color: var(--navy-800); }
 
 /* Table */
 .table-wrap { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); overflow: auto; }

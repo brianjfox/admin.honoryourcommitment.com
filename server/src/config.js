@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import crypto from 'node:crypto'
 
 function required(name, devFallback) {
   const v = process.env[name]
@@ -14,15 +15,32 @@ function required(name, devFallback) {
 const bool = (v, def = false) =>
   v === undefined ? def : ['1', 'true', 'yes', 'on'].includes(String(v).toLowerCase())
 
+const DB_URL = required('DATABASE_URL', 'postgres://phyc:phyc@localhost:5432/phyc')
+
 export const config = {
   env: process.env.NODE_ENV || 'development',
   isProd: process.env.NODE_ENV === 'production',
   host: process.env.HOST || '127.0.0.1',
   port: parseInt(process.env.PORT || '4000', 10),
 
-  databaseUrl: required('DATABASE_URL', 'postgres://phyc:phyc@localhost:5432/phyc'),
+  databaseUrl: DB_URL,
   jwtSecret: required('JWT_SECRET', 'dev-insecure-change-me'),
   cookieSecure: bool(process.env.COOKIE_SECURE, false),
+
+  // Public origin of the API, used to build unsubscribe links in broadcasts.
+  apiPublicUrl: (process.env.API_PUBLIC_URL || 'http://localhost:3000').replace(/\/$/, ''),
+
+  // Must match the API's UNSUBSCRIBE_SECRET so the links it generates verify.
+  // If unset, both derive the same value from the shared DATABASE_URL.
+  unsubscribeSecret:
+    process.env.UNSUBSCRIBE_SECRET ||
+    crypto.createHash('sha256').update(`${DB_URL}:unsubscribe`).digest('hex'),
+
+  // Broadcast send pacing: a small delay between messages keeps us within the
+  // transactional provider's rate limits.
+  broadcast: {
+    delayMs: parseInt(process.env.BROADCAST_DELAY_MS || '200', 10),
+  },
 
   superAdmin: {
     email: (process.env.SUPER_ADMIN_EMAIL || '').trim().toLowerCase(),

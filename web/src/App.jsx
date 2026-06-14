@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import People from './pages/People.jsx'
 import Tags from './pages/Tags.jsx'
 import Groups from './pages/Groups.jsx'
+import Broadcasts from './pages/Broadcasts.jsx'
 import Users from './pages/Users.jsx'
 
 function Protected({ children, cap }) {
@@ -37,6 +38,14 @@ export default function App() {
         <Route path="/people" element={<People />} />
         <Route path="/tags" element={<Tags />} />
         <Route path="/groups" element={<Groups />} />
+        <Route
+          path="/broadcasts"
+          element={
+            <Protected cap="broadcast">
+              <Broadcasts />
+            </Protected>
+          }
+        />
         <Route
           path="/users"
           element={

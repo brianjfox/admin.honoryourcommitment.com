@@ -13,6 +13,7 @@ import groupsRoutes from './routes/groups.js'
 import statsRoutes from './routes/stats.js'
 import usersRoutes from './routes/users.js'
 import recordsRoutes from './routes/records.js'
+import broadcastRoutes from './routes/broadcasts.js'
 
 export async function buildServer() {
   const app = Fastify({
@@ -61,6 +62,7 @@ export async function buildServer() {
   await app.register(statsRoutes)
   await app.register(usersRoutes)
   await app.register(recordsRoutes)
+  await app.register(broadcastRoutes)
 
   app.setErrorHandler((err, req, reply) => {
     req.log.error(err)

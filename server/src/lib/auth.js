@@ -27,12 +27,15 @@ export function verifyPassword(password, stored) {
    - curate:       add/remove taggings and group memberships
    - delete_tag / delete_group: delete tags / groups
    - edit_data / delete_data:   modify / delete campaign records
-   - manage_users: CRUD admin users */
+   - broadcast:    compose and send campaign-update emails to opt-in contacts
+   - manage_users: CRUD admin users
+   broadcast is SUPER_ADMIN-only: mass email to constituents represents the
+   organization and is hard to undo, so it stays above the curation tier. */
 export const CAPABILITIES = {
   SUPER_ADMIN: new Set([
     'view', 'tag', 'group', 'curate',
     'delete_tag', 'delete_group',
-    'edit_data', 'delete_data', 'manage_users',
+    'edit_data', 'delete_data', 'broadcast', 'manage_users',
   ]),
   ADMIN: new Set(['view', 'tag', 'group', 'curate']),
   VIEWER: new Set(['view']),

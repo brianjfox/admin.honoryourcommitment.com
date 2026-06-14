@@ -34,7 +34,7 @@ export const api = {
 const CAPS = {
   SUPER_ADMIN: [
     'view', 'tag', 'group', 'curate', 'delete_tag', 'delete_group',
-    'edit_data', 'delete_data', 'manage_users',
+    'edit_data', 'delete_data', 'broadcast', 'manage_users',
   ],
   ADMIN: ['view', 'tag', 'group', 'curate'],
   VIEWER: ['view'],
