@@ -287,12 +287,109 @@ function Detail({ data, tags, groups, can, onClose, onChanged }) {
           {records.claimants.length} claimant record(s)
         </p>
 
+        {can('edit_data') ? (
+          <div className="records">
+            {records.signatures.map((r) => (
+              <RecordEditor key={r.id} type="signature" record={r} onSaved={onChanged} />
+            ))}
+            {records.cases.map((r) => (
+              <RecordEditor key={r.id} type="case" record={r} onSaved={onChanged} />
+            ))}
+            {records.claimants.map((r) => (
+              <RecordEditor key={r.id} type="claimant" record={r} onSaved={onChanged} />
+            ))}
+          </div>
+        ) : null}
+
         {can('delete_data') && (
           <button className="btn btn--danger" onClick={removePerson}>
             Delete person &amp; all records
           </button>
         )}
       </aside>
+    </div>
+  )
+}
+
+const RECORD_FIELDS = {
+  signature: [
+    ['first_name', 'First name', 'text'],
+    ['last_name', 'Last name', 'text'],
+    ['country', 'Country', 'text'],
+    ['consent_public', 'Public', 'bool'],
+    ['consent_contact', 'Contact updates', 'bool'],
+  ],
+  case: [
+    ['first_name', 'First name', 'text'],
+    ['last_name', 'Last name', 'text'],
+    ['phone', 'Phone', 'text'],
+    ['country', 'Country', 'text'],
+    ['application_year', 'Application year', 'int'],
+    ['investment_type', 'Investment type', 'text'],
+    ['investment_amount', 'Amount (EUR)', 'num'],
+    ['family_members', 'Family members', 'int'],
+    ['status', 'Status', 'text'],
+    ['story', 'Story', 'textarea'],
+  ],
+  claimant: [
+    ['full_name', 'Full name', 'text'],
+    ['country', 'Country', 'text'],
+    ['application_year', 'Application year', 'int'],
+    ['message', 'Message', 'textarea'],
+  ],
+}
+
+// Inline editor for one campaign record (SUPER_ADMIN only).
+function RecordEditor({ type, record, onSaved }) {
+  const fields = RECORD_FIELDS[type]
+  const seed = () => {
+    const o = {}
+    for (const [k] of fields) o[k] = record[k] == null ? '' : record[k]
+    return o
+  }
+  const [form, setForm] = useState(seed)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  const set = (k, type2) => (e) =>
+    setForm((f) => ({ ...f, [k]: type2 === 'bool' ? e.target.checked : e.target.value }))
+
+  const save = async () => {
+    setSaving(true)
+    setSaved(false)
+    try {
+      await api.patch(`/records/${type}/${record.id}`, form)
+      setSaved(true)
+      onSaved?.()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="record-edit">
+      <div className="record-edit__head">
+        {type} <span className="muted small">#{String(record.id).slice(0, 8)}</span>
+      </div>
+      {fields.map(([k, label, kind]) => (
+        <label key={k} className="record-edit__field">
+          <span>{label}</span>
+          {kind === 'bool' ? (
+            <input type="checkbox" checked={!!form[k]} onChange={set(k, 'bool')} />
+          ) : kind === 'textarea' ? (
+            <textarea rows="2" value={form[k]} onChange={set(k)} />
+          ) : (
+            <input
+              type={kind === 'int' || kind === 'num' ? 'number' : 'text'}
+              value={form[k]}
+              onChange={set(k)}
+            />
+          )}
+        </label>
+      ))}
+      <button className="btn btn--sm" onClick={save} disabled={saving}>
+        {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}
+      </button>
     </div>
   )
 }
