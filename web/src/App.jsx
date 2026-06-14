@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './auth.jsx'
 import Layout from './components/Layout.jsx'
 import Login from './pages/Login.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import People from './pages/People.jsx'
 import Tags from './pages/Tags.jsx'
@@ -24,6 +25,7 @@ export default function App() {
         path="/login"
         element={user && !loading ? <Navigate to="/" replace /> : <Login />}
       />
+      <Route path="/reset" element={<ResetPassword />} />
       <Route
         element={
           <Protected>

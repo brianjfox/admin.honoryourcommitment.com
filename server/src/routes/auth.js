@@ -1,5 +1,7 @@
-import { verifyPassword } from '../lib/auth.js'
+import crypto from 'node:crypto'
+import { verifyPassword, hashPassword } from '../lib/auth.js'
 import { query } from '../lib/db.js'
+import { sendPasswordReset } from '../lib/email.js'
 import { config } from '../config.js'
 
 export default async function authRoutes(fastify) {
@@ -51,4 +53,60 @@ export default async function authRoutes(fastify) {
     { preHandler: [fastify.authenticate] },
     async (req) => ({ user: req.user })
   )
+
+  // Request a reset link. Always returns ok (never reveals whether the email
+  // exists). Rate-limited.
+  fastify.post(
+    '/api/auth/forgot',
+    { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } },
+    async (req) => {
+      const email = String(req.body?.email || '').trim().toLowerCase()
+      if (email) {
+        const { rows } = await query(
+          'SELECT id FROM admin.users WHERE email = $1 AND active = true',
+          [email]
+        )
+        if (rows[0]) {
+          const token = crypto.randomBytes(32).toString('base64url')
+          const hash = crypto.createHash('sha256').update(token).digest('hex')
+          await query(
+            `UPDATE admin.users
+             SET reset_token_hash = $1, reset_expires_at = now() + interval '1 hour'
+             WHERE id = $2`,
+            [hash, rows[0].id]
+          )
+          const url = `${config.publicUrl}/reset?token=${encodeURIComponent(token)}`
+          try {
+            await sendPasswordReset(email, url, req.log)
+          } catch (err) {
+            req.log.warn({ err: err.message }, 'password reset email failed')
+          }
+        }
+      }
+      return { ok: true }
+    }
+  )
+
+  // Complete a reset with a valid, unexpired token.
+  fastify.post('/api/auth/reset', async (req, reply) => {
+    const token = String(req.body?.token || '')
+    const password = String(req.body?.password || '')
+    if (!token || password.length < 10) {
+      return reply.code(400).send({ error: 'invalid' })
+    }
+    const hash = crypto.createHash('sha256').update(token).digest('hex')
+    const { rows } = await query(
+      `SELECT id FROM admin.users
+       WHERE reset_token_hash = $1 AND reset_expires_at > now() AND active = true`,
+      [hash]
+    )
+    if (!rows[0]) return reply.code(400).send({ error: 'invalid_or_expired' })
+    await query(
+      `UPDATE admin.users
+       SET password_hash = $1, reset_token_hash = NULL, reset_expires_at = NULL
+       WHERE id = $2`,
+      [hashPassword(password), rows[0].id]
+    )
+    return { ok: true }
+  })
 }

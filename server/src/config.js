@@ -28,4 +28,21 @@ export const config = {
     email: (process.env.SUPER_ADMIN_EMAIL || '').trim().toLowerCase(),
     password: process.env.SUPER_ADMIN_PASSWORD || '',
   },
+
+  // Public origin of the admin site, used to build password-reset links.
+  publicUrl: (process.env.ADMIN_PUBLIC_URL || 'http://localhost:5180').replace(/\/$/, ''),
+
+  // SMTP for password-reset emails (reuse the API's transactional provider).
+  email: {
+    disabled: bool(process.env.DISABLE_EMAIL, false),
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: bool(process.env.SMTP_SECURE, false),
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from:
+      process.env.EMAIL_FROM ||
+      'Honor Your Commitment <no-reply@honoryourcommitment.com>',
+    replyTo: process.env.EMAIL_REPLY_TO || '',
+  },
 }
