@@ -1,4 +1,5 @@
 import { query } from '../lib/db.js'
+import { buildFilter } from './people.js'
 
 export default async function groupsRoutes(fastify) {
   const view = { preHandler: [fastify.authenticate, fastify.requireCap('view')] }
@@ -62,6 +63,20 @@ export default async function groupsRoutes(fastify) {
       )
     }
     return { ok: true, added: emails.length }
+  })
+
+  // Add every person matching a demographic filter (same query params as
+  // GET /api/people) to the group, in one statement. Powers "add all matching".
+  fastify.post('/api/groups/:id/members/from-filter', curate, async (req) => {
+    const { where, params } = buildFilter(req.query)
+    const res = await query(
+      `INSERT INTO admin.group_members (group_id, person_email, created_by)
+       SELECT $${params.length + 1}, p.email, $${params.length + 2}
+       FROM admin.people p ${where}
+       ON CONFLICT DO NOTHING`,
+      [...params, req.params.id, req.user.id]
+    )
+    return { ok: true, added: res.rowCount }
   })
 
   fastify.delete('/api/groups/:id/members/:email', curate, async (req) => {

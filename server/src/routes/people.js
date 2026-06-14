@@ -1,7 +1,7 @@
 import { query } from '../lib/db.js'
 
 // Build a parameterized WHERE from the supported demographic filters.
-function buildFilter(q) {
+export function buildFilter(q) {
   const params = []
   const P = (v) => {
     params.push(v)

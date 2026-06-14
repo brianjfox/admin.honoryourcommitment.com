@@ -15,16 +15,32 @@ export default function People() {
   const [groups, setGroups] = useState([])
   const [selected, setSelected] = useState(null) // detail for one person
   const [loading, setLoading] = useState(false)
+  const [bulkGroup, setBulkGroup] = useState('')
+  const [bulkMsg, setBulkMsg] = useState(null)
 
-  const load = useCallback(() => {
+  const filterQS = useCallback(() => {
     const qs = new URLSearchParams()
     Object.entries(filters).forEach(([k, v]) => v !== '' && qs.set(k, v))
+    return qs
+  }, [filters])
+
+  const load = useCallback(() => {
     setLoading(true)
     api
-      .get('/people?' + qs.toString())
+      .get('/people?' + filterQS().toString())
       .then(setData)
       .finally(() => setLoading(false))
-  }, [filters])
+  }, [filterQS])
+
+  const reloadGroups = () => api.get('/groups').then((d) => setGroups(d.groups))
+
+  const addAllToGroup = async () => {
+    if (!bulkGroup) return
+    setBulkMsg(null)
+    const r = await api.post(`/groups/${bulkGroup}/members/from-filter?${filterQS().toString()}`)
+    setBulkMsg(`Added ${r.added} new member(s).`)
+    reloadGroups()
+  }
 
   useEffect(() => {
     load()
@@ -88,9 +104,25 @@ export default function People() {
         </select>
       </div>
 
-      <p className="muted">
-        {loading ? 'Loading…' : `${data.total} people`}
-      </p>
+      <div className="bulk-bar">
+        <span className="muted">{loading ? 'Loading…' : `${data.total} people`}</span>
+        {can('curate') && groups.length > 0 && data.total > 0 && (
+          <span className="bulk-actions">
+            <select value={bulkGroup} onChange={(e) => setBulkGroup(e.target.value)}>
+              <option value="">Add all matching to group…</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+            <button className="btn" onClick={addAllToGroup} disabled={!bulkGroup}>
+              Add {data.total}
+            </button>
+            {bulkMsg && <span className="muted small">{bulkMsg}</span>}
+          </span>
+        )}
+      </div>
 
       <div className="table-wrap">
         <table className="table">
