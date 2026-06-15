@@ -127,6 +127,7 @@ textarea { width: 100%; resize: vertical; line-height: 1.5; }
 .record-edit__head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-weight: 700; text-transform: capitalize; margin-bottom: 0.2rem; color: var(--navy-800); }
 .record-edit__dates { margin-bottom: 0.5rem; }
 .record-edit__readonly { margin: 0; }
+.record-edit__resend { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
 .record-edit__field { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; font-size: 0.85rem; }
 .record-edit__field > span { color: var(--ink-soft); }
 .record-edit__field input[type="checkbox"] { justify-self: start; }

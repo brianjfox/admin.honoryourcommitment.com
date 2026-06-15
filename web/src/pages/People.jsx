@@ -300,6 +300,7 @@ function Detail({ data, tags, groups, can, onClose, onChanged }) {
                 type={type}
                 record={record}
                 canEdit={can('edit_data')}
+                canResend={can('curate')}
                 onSaved={onChanged}
               />
             ))}
@@ -346,7 +347,7 @@ const RECORD_FIELDS = {
 
 // One campaign record: its confirmation status + dates, read-only for viewers
 // and inline-editable for SUPER_ADMIN (edit_data).
-function RecordCard({ type, record, canEdit, onSaved }) {
+function RecordCard({ type, record, canEdit, canResend, onSaved }) {
   const fields = RECORD_FIELDS[type]
   const seed = () => {
     const o = {}
@@ -356,7 +357,24 @@ function RecordCard({ type, record, canEdit, onSaved }) {
   const [form, setForm] = useState(seed)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [resend, setResend] = useState({ busy: false, msg: null })
   const confirmed = !!record.confirmed_at
+
+  const resendConfirmation = async () => {
+    setResend({ busy: true, msg: null })
+    try {
+      const r = await api.post(`/records/${type}/${record.id}/resend-confirmation`)
+      setResend({
+        busy: false,
+        msg: r.sent ? `Sent to ${r.to}` : 'Email disabled — link logged on the server',
+      })
+    } catch (e) {
+      setResend({
+        busy: false,
+        msg: e.code === 'already_confirmed' ? 'Already confirmed' : 'Could not send',
+      })
+    }
+  }
 
   const set = (k, type2) => (e) =>
     setForm((f) => ({ ...f, [k]: type2 === 'bool' ? e.target.checked : e.target.value }))
@@ -387,6 +405,15 @@ function RecordCard({ type, record, canEdit, onSaved }) {
         Submitted {fmtDate(record.created_at) || '—'}
         {confirmed ? ` · Confirmed ${fmtDate(record.confirmed_at)}` : ''}
       </div>
+
+      {!confirmed && canResend && (
+        <div className="record-edit__resend">
+          <button className="btn btn--sm" onClick={resendConfirmation} disabled={resend.busy}>
+            {resend.busy ? 'Sending…' : 'Resend confirmation'}
+          </button>
+          {resend.msg && <span className="muted small">{resend.msg}</span>}
+        </div>
+      )}
 
       {canEdit ? (
         <>

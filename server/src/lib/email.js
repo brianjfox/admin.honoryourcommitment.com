@@ -64,6 +64,69 @@ export function sendBroadcastMessage(transport, { to, subject, html, text, unsub
   })
 }
 
+/* Double opt-in confirmation copy — kept in sync with the public API's
+   email.js so a resent link reads exactly like the original. */
+const CONFIRM_COPY = {
+  en: {
+    subject: 'Please confirm — Portugal Must Honor Its Commitments',
+    line1: 'Thank you for taking action.',
+    line2:
+      'Please confirm your submission by clicking the button below. Your record only counts once confirmed.',
+    button: 'Confirm',
+    ignore: "If you didn't make this request, you can safely ignore this email.",
+  },
+  pt: {
+    subject: 'Confirme, por favor — Portugal Deve Honrar os Seus Compromissos',
+    line1: 'Obrigado por agir.',
+    line2:
+      'Confirme a sua submissão clicando no botão abaixo. O seu registo só conta depois de confirmado.',
+    button: 'Confirmar',
+    ignore: 'Se não fez este pedido, pode ignorar este email com segurança.',
+  },
+  es: {
+    subject: 'Confirme, por favor — Portugal Debe Honrar Sus Compromisos',
+    line1: 'Gracias por actuar.',
+    line2:
+      'Confirme su envío haciendo clic en el botón de abajo. Su registro solo cuenta una vez confirmado.',
+    button: 'Confirmar',
+    ignore: 'Si no realizó esta solicitud, puede ignorar este correo.',
+  },
+  zh: {
+    subject: '请确认 — 葡萄牙必须信守承诺',
+    line1: '感谢您采取行动。',
+    line2: '请点击下方按钮确认您的提交。您的记录仅在确认后才计入。',
+    button: '确认',
+    ignore: '如果您并未发起此请求，可以安全地忽略此邮件。',
+  },
+}
+
+/* Resend a double opt-in confirmation link for one record. `url` points at the
+   public API's /api/confirm. No-op (logs) when email is disabled. */
+export async function sendConfirmation(to, url, locale, log) {
+  const c = CONFIRM_COPY[locale] || CONFIRM_COPY.en
+  if (config.email.disabled) {
+    log?.info({ to, url }, 'EMAIL DISABLED — confirmation link')
+    return { sent: false }
+  }
+  await makeTransport().sendMail({
+    from: config.email.from,
+    replyTo: config.email.replyTo || undefined,
+    to,
+    subject: c.subject,
+    text: `${c.line1}\n\n${c.line2}\n\n${url}\n\n${c.ignore}`,
+    html: `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#15212e;line-height:1.6">
+  <div style="max-width:520px;margin:0 auto;padding:24px">
+    <h2 style="color:#0a2342">Portugal Must Honor Its Commitments</h2>
+    <p>${esc(c.line1)}</p>
+    <p>${esc(c.line2)}</p>
+    <p style="margin:28px 0"><a href="${esc(url)}" style="background:#c9a14a;color:#061a30;font-weight:bold;padding:12px 22px;border-radius:6px;text-decoration:none;display:inline-block">${esc(c.button)}</a></p>
+    <p style="font-size:13px;color:#46586a">${esc(c.ignore)}</p>
+    <p style="font-size:12px;color:#8a98a6;word-break:break-all">${esc(url)}</p>
+  </div></body></html>`,
+  })
+  return { sent: true }
+}
+
 // Email a password-reset link. No-op (logs the link) when email is disabled.
 export async function sendPasswordReset(to, url, log) {
   if (config.email.disabled) {
