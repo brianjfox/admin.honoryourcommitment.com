@@ -4,6 +4,8 @@ import { useAuth } from '../auth.jsx'
 
 const SOURCES = ['signature', 'case', 'claimant']
 
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString() : null)
+
 export default function People() {
   const { can } = useAuth()
   const [filters, setFilters] = useState({
@@ -182,6 +184,12 @@ export default function People() {
 
 function Detail({ data, tags, groups, can, onClose, onChanged }) {
   const { person, records, groups: memberOf } = data
+  const allRecords = [
+    ...records.signatures.map((r) => ({ type: 'signature', record: r })),
+    ...records.cases.map((r) => ({ type: 'case', record: r })),
+    ...records.claimants.map((r) => ({ type: 'claimant', record: r })),
+  ]
+  const confirmedCount = allRecords.filter((x) => x.record.confirmed_at).length
   const [tagId, setTagId] = useState('')
   const [groupId, setGroupId] = useState('')
   const email = person.email
@@ -223,7 +231,7 @@ function Detail({ data, tags, groups, can, onClose, onChanged }) {
           <div><dt>Forms</dt><dd>{(person.sources || []).join(', ')}</dd></div>
           <div><dt>App. year</dt><dd>{person.application_year || '—'}</dd></div>
           <div><dt>Investment</dt><dd>{person.investment_type || '—'}</dd></div>
-          <div><dt>Status</dt><dd>{person.confirmed ? 'Confirmed' : 'Unconfirmed'}</dd></div>
+          <div><dt>Confirmed</dt><dd>{confirmedCount} of {allRecords.length} record(s)</dd></div>
         </dl>
 
         <h3>Tags</h3>
@@ -281,25 +289,22 @@ function Detail({ data, tags, groups, can, onClose, onChanged }) {
           </div>
         )}
 
-        <h3>Records</h3>
-        <p className="muted">
-          {records.signatures.length} signature(s), {records.cases.length} case(s),{' '}
-          {records.claimants.length} claimant record(s)
-        </p>
-
-        {can('edit_data') ? (
+        <h3>Records &amp; confirmation</h3>
+        {allRecords.length === 0 ? (
+          <p className="muted">No records.</p>
+        ) : (
           <div className="records">
-            {records.signatures.map((r) => (
-              <RecordEditor key={r.id} type="signature" record={r} onSaved={onChanged} />
-            ))}
-            {records.cases.map((r) => (
-              <RecordEditor key={r.id} type="case" record={r} onSaved={onChanged} />
-            ))}
-            {records.claimants.map((r) => (
-              <RecordEditor key={r.id} type="claimant" record={r} onSaved={onChanged} />
+            {allRecords.map(({ type, record }) => (
+              <RecordCard
+                key={type + record.id}
+                type={type}
+                record={record}
+                canEdit={can('edit_data')}
+                onSaved={onChanged}
+              />
             ))}
           </div>
-        ) : null}
+        )}
 
         {can('delete_data') && (
           <button className="btn btn--danger" onClick={removePerson}>
@@ -339,8 +344,9 @@ const RECORD_FIELDS = {
   ],
 }
 
-// Inline editor for one campaign record (SUPER_ADMIN only).
-function RecordEditor({ type, record, onSaved }) {
+// One campaign record: its confirmation status + dates, read-only for viewers
+// and inline-editable for SUPER_ADMIN (edit_data).
+function RecordCard({ type, record, canEdit, onSaved }) {
   const fields = RECORD_FIELDS[type]
   const seed = () => {
     const o = {}
@@ -350,6 +356,7 @@ function RecordEditor({ type, record, onSaved }) {
   const [form, setForm] = useState(seed)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const confirmed = !!record.confirmed_at
 
   const set = (k, type2) => (e) =>
     setForm((f) => ({ ...f, [k]: type2 === 'bool' ? e.target.checked : e.target.value }))
@@ -369,27 +376,55 @@ function RecordEditor({ type, record, onSaved }) {
   return (
     <div className="record-edit">
       <div className="record-edit__head">
-        {type} <span className="muted small">#{String(record.id).slice(0, 8)}</span>
+        <span>
+          {type} <span className="muted small">#{String(record.id).slice(0, 8)}</span>
+        </span>
+        <span className={'pill ' + (confirmed ? 'pill--ok' : 'pill--muted')}>
+          {confirmed ? 'confirmed' : 'unconfirmed'}
+        </span>
       </div>
-      {fields.map(([k, label, kind]) => (
-        <label key={k} className="record-edit__field">
-          <span>{label}</span>
-          {kind === 'bool' ? (
-            <input type="checkbox" checked={!!form[k]} onChange={set(k, 'bool')} />
-          ) : kind === 'textarea' ? (
-            <textarea rows="2" value={form[k]} onChange={set(k)} />
-          ) : (
-            <input
-              type={kind === 'int' || kind === 'num' ? 'number' : 'text'}
-              value={form[k]}
-              onChange={set(k)}
-            />
-          )}
-        </label>
-      ))}
-      <button className="btn btn--sm" onClick={save} disabled={saving}>
-        {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}
-      </button>
+      <div className="muted small record-edit__dates">
+        Submitted {fmtDate(record.created_at) || '—'}
+        {confirmed ? ` · Confirmed ${fmtDate(record.confirmed_at)}` : ''}
+      </div>
+
+      {canEdit ? (
+        <>
+          {fields.map(([k, label, kind]) => (
+            <label key={k} className="record-edit__field">
+              <span>{label}</span>
+              {kind === 'bool' ? (
+                <input type="checkbox" checked={!!form[k]} onChange={set(k, 'bool')} />
+              ) : kind === 'textarea' ? (
+                <textarea rows="2" value={form[k]} onChange={set(k)} />
+              ) : (
+                <input
+                  type={kind === 'int' || kind === 'num' ? 'number' : 'text'}
+                  value={form[k]}
+                  onChange={set(k)}
+                />
+              )}
+            </label>
+          ))}
+          <button className="btn btn--sm" onClick={save} disabled={saving}>
+            {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}
+          </button>
+        </>
+      ) : (
+        <dl className="kv record-edit__readonly">
+          {fields.map(([k, label, kind]) => {
+            let val = record[k]
+            if (kind === 'bool') val = val ? 'Yes' : 'No'
+            else if (val == null || val === '') val = '—'
+            return (
+              <div key={k}>
+                <dt>{label}</dt>
+                <dd>{String(val)}</dd>
+              </div>
+            )
+          })}
+        </dl>
+      )}
     </div>
   )
 }
